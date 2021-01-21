@@ -64,6 +64,144 @@ def msg_box(doc, message):
     return False
 
 
+def generate_zugferd_xml(data):
+    ns = {
+        'rsm': 'urn:ferd:CrossIndustryDocument:invoice:1p0',
+        'xsi': 'http://www.w3.org/2001/XMLSchema-instance',
+        'ram': 'urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:12',
+        'udt': 'urn:un:unece:uncefact:data:standard:UnqualifiedDataType:15',
+    }
+    ET.register_namespace('rsm', ns['rsm'])
+    ET.register_namespace('xsi', ns['xsi'])
+    ET.register_namespace('ram', ns['ram'])
+    ET.register_namespace('udt', ns['udt'])
+    root = ET.Element(ET.QName(ns['rsm'], 'CrossIndustryDocument'))
+    doc_ctx = ET.SubElement(
+        root, ET.QName(ns['rsm'], 'SpecifiedExchangedDocumentContext'))
+    ctx_param = ET.SubElement(
+        doc_ctx, ET.QName(ns['ram'], 'GuidelineSpecifiedDocumentContextParameter'))
+    ctx_param_id = ET.SubElement(ctx_param, ET.QName(ns['ram'], 'ID'))
+    ctx_param_id.text = 'urn:ferd:CrossIndustryDocument:invoice:1p0:basic'
+    header_doc = ET.SubElement(
+        root, ET.QName(ns['rsm'], 'HeaderExchangedDocument'))
+    header_doc_id = ET.SubElement(header_doc, ET.QName(ns['ram'], 'ID'))
+    header_doc_id.text = data['invoice_number']
+    header_doc_typecode = ET.SubElement(
+        header_doc, ET.QName(ns['ram'], 'TypeCode'))
+    header_doc_typecode.text = data['invoice_or_refund']
+    date_node = ET.SubElement(header_doc, ET.QName(ns['ram'], 'IssueDateTime'))
+    date_node_str = ET.SubElement(
+        date_node, ET.QName(ns['udt'], 'DateTimeString'), format='102')
+    # 102 = format YYYYMMDD
+    date_node_str.text = data['invoice_date'].strftime('%Y%m%d')
+    trade_transaction = ET.SubElement(
+        root, ET.QName(ns['rsm'], 'SpecifiedSupplyChainTradeTransaction'))
+    trade_agreement = ET.SubElement(
+        trade_transaction,
+        ET.QName(ns['ram'], 'ApplicableSupplyChainTradeAgreement'))
+    seller = ET.SubElement(trade_agreement, ET.QName(ns['ram'], 'SellerTradeParty'))
+    seller_name = ET.SubElement(seller, ET.QName(ns['ram'], 'Name'))
+    seller_name.text = data['issuer_name']
+    seller_country = ET.SubElement(
+        seller, ET.QName(ns['ram'], 'PostalTradeAddress'))
+    seller_post_code = ET.SubElement(
+        seller_country, ET.QName(ns['ram'], 'PostcodeCode'))
+    seller_post_code.text = data['issuer_post_code']
+    seller_street_address = ET.SubElement(
+        seller_country, ET.QName(ns['ram'], 'LineOne'))
+    seller_street_address.text = data['issuer_street_address']
+    seller_city_name = ET.SubElement(
+        seller_country, ET.QName(ns['ram'], 'CityName'))
+    seller_city_name.text = data['issuer_city_name']
+    seller_country_code = ET.SubElement(
+        seller_country, ET.QName(ns['ram'], 'CountryID'))
+    seller_country_code.text = data['issuer_country_code']
+    if data.get('issuer_vat_number'):
+        seller_tax_reg = ET.SubElement(
+            seller, ET.QName(ns['ram'], 'SpecifiedTaxRegistration'))
+        seller_tax_reg_id = ET.SubElement(
+            seller_tax_reg, ET.QName(ns['ram'], 'ID'), schemeID='VA')
+        seller_tax_reg_id.text = data['issuer_vat_number']
+    buyer = ET.SubElement(trade_agreement, ET.QName(ns['ram'], 'BuyerTradeParty'))
+    buyer_name = ET.SubElement(buyer, ET.QName(ns['ram'], 'Name'))
+    buyer_name.text = data['customer_name']
+    buyer_country = ET.SubElement(
+        buyer, ET.QName(ns['ram'], 'PostalTradeAddress'))
+    buyer_post_code = ET.SubElement(
+        buyer_country, ET.QName(ns['ram'], 'PostcodeCode'))
+    buyer_post_code.text = data['customer_post_code']
+    buyer_street_address = ET.SubElement(
+        buyer_country, ET.QName(ns['ram'], 'LineOne'))
+    buyer_street_address.text = data['customer_street_address']
+    buyer_city_name = ET.SubElement(
+        buyer_country, ET.QName(ns['ram'], 'CityName'))
+    buyer_city_name.text = data['customer_city_name']
+    buyer_country_code = ET.SubElement(
+        buyer_country, ET.QName(ns['ram'], 'CountryID'))
+    buyer_country_code.text = data['customer_country_code']
+    if data.get('customer_vat_number'):
+        buyer_tax_reg = ET.SubElement(
+            buyer, ET.QName(ns['ram'], 'SpecifiedTaxRegistration'))
+        buyer_tax_reg_id = ET.SubElement(
+            buyer_tax_reg, ET.QName(ns['ram'], 'ID'), schemeID='VA')
+        buyer_tax_reg_id.text = data['customer_vat_number']
+    if data.get('customer_order_ref'):
+        buyer_order_ref = ET.SubElement(
+            trade_agreement, ET.QName(ns['ram'], 'BuyerOrderReferencedDocument'))
+        buyer_order_id = ET.SubElement(
+            buyer_order_ref, ET.QName(ns['ram'], 'IssuerAssignedID'))
+        buyer_order_id.text = data['customer_order_ref']
+    ET.SubElement(
+        trade_transaction, ET.QName(ns['ram'], 'ApplicableSupplyChainTradeDelivery'))
+    trade_settlement = ET.SubElement(
+        trade_transaction, ET.QName(ns['ram'], 'ApplicableSupplyChainTradeSettlement'))
+    invoice_payment_ref = ET.SubElement(
+        trade_settlement, ET.QName(ns['ram'], 'PaymentReference'))
+    invoice_payment_ref.text = data['invoice_payment_ref']
+    invoice_currency = ET.SubElement(
+        trade_settlement, ET.QName(ns['ram'], 'InvoiceCurrencyCode'))
+    invoice_currency.text = data['invoice_currency']
+    payment = ET.SubElement(
+        trade_settlement,
+        ET.QName(ns['ram'], 'SpecifiedTradeSettlementPaymentMeans'))
+    payment_type = ET.SubElement(
+        payment, ET.QName(ns['ram'], 'TypeCode'))
+    payment_type.text = data['31']
+    payment_info = ET.SubElement(
+        payment, ET.QName(ns['ram'], 'Information'))
+    payment_info.text = 'money order'
+    payment_payee_account = ET.SubElement(
+        payment,
+        ET.QName(ns['ram'], 'PayeePartyCreditorFinancialAccount'))
+    payment_payee_accountnum = ET.SubElement(
+        payment_payee_account, ET.QName(ns['ram'], 'IBANID'))
+    payment_payee_accountnum.text = data['payee_iban']
+    payment_payee_bank = ET.SubElement(
+        payment,
+        ET.QName(ns['ram'], 'PayeeSpecifiedCreditorFinancialInstitution'))
+    payment_payee_bic = ET.SubElement(
+        payment_payee_bank, ET.QName(ns['ram'], 'BICID'))
+    payment_payee_bic.text = data['payee_bic']
+    payment_payee_name = ET.SubElement(
+        payment_payee_bank, ET.QName(ns['ram'], 'Name'))
+    payment_payee_name.text = data['payee_bank']
+    sums = ET.SubElement(
+        trade_settlement,
+        ET.QName(ns['ram'], 'SpecifiedTradeSettlementMonetarySummation'))
+    tax_basis_total_amt = ET.SubElement(
+        sums, ET.QName(ns['ram'], 'TaxBasisTotalAmount'))
+    tax_basis_total_amt.text = '%.2f' % data['total_without_tax']
+    tax_total = ET.SubElement(
+        sums, ET.QName(ns['ram'], 'TaxTotalAmount'), currencyID=data['invoice_currency'])
+    tax_total.text = '%.2f' % data['total_tax']
+    total = ET.SubElement(sums, ET.QName(ns['ram'], 'GrandTotalAmount'))
+    total.text = '%.2f' % data['total_with_tax']
+    residual = ET.SubElement(sums, ET.QName(ns['ram'], 'DuePayableAmount'))
+    residual.text = '%.2f' % data['total_due']
+    xml_byte = ET.tostring(root)
+    return xml_byte
+
+
 def generate_facturx_xml(data):
     ns = {
         'xsi': 'http://www.w3.org/2001/XMLSchema-instance',
@@ -205,95 +343,130 @@ def get_and_check_data(doc, data_sheet):
             'required': True,
             'line': 3,
             },
+        'issuer_post_code': {
+            'type': 'char',
+            'required': True,
+            'line': 4,
+            },
+        'issuer_street_address': {
+            'type': 'char',
+            'required': True,
+            'line': 5,
+            },
+        'issuer_city_name': {
+            'type': 'char',
+            'required': True,
+            'line': 6,
+            },
         'issuer_vat_number': {
             'type': 'char',
             'required': False,
-            'line': 4,
+            'line': 7,
             },
         'issuer_siret': {
             'type': 'char',
             'required': False,
-            'line': 5,
+            'line': 8,
             },
         'issuer_country_code': {
             'type': 'char',
             'required': True,
-            'line': 6,
+            'line': 9,
             },
         'customer_name': {
             'type': 'char',
             'required': True,
             'line': 8,
             },
-        'customer_vat_number': {
+        'customer_post_code': {
             'type': 'char',
-            'required': False,
+            'required': True,
             'line': 9,
             },
-        'customer_siret': {
+        'customer_street_address': {
             'type': 'char',
-            'required': False,
+            'required': True,
             'line': 10,
             },
-        'customer_country_code': {
+        'customer_city_name': {
             'type': 'char',
             'required': True,
             'line': 11,
             },
-        'customer_chorus_service_code': {
+        'customer_vat_number': {
             'type': 'char',
             'required': False,
             'line': 12,
             },
-        'invoice_or_refund': {
+        'customer_siret': {
             'type': 'char',
             'required': False,
+            'line': 13,
+            },
+        'customer_country_code': {
+            'type': 'char',
+            'required': True,
             'line': 14,
             },
-        'customer_order_ref': {
+        'customer_chorus_service_code': {
             'type': 'char',
             'required': False,
             'line': 15,
             },
-        'invoice_number': {
+        'invoice_or_refund': {
             'type': 'char',
-            'required': True,
+            'required': False,
             'line': 16,
             },
-        'invoice_date': {
-            'type': 'date',
-            'required': True,
+        'customer_order_ref': {
+            'type': 'char',
+            'required': False,
             'line': 17,
             },
-        'invoice_currency': {
+        'invoice_number': {
             'type': 'char',
             'required': True,
             'line': 18,
             },
-        'total_without_tax': {
-            'type': 'float',
+        'invoice_payment_ref': {
+            'type': 'char',
+            'required': True,
+            'line': 19,
+            },
+        'invoice_date': {
+            'type': 'date',
             'required': True,
             'line': 20,
             },
-        'total_tax': {
-            'type': 'float',
+        'invoice_currency': {
+            'type': 'char',
             'required': True,
             'line': 21,
             },
-        'total_with_tax': {
+        'total_without_tax': {
             'type': 'float',
             'required': True,
             'line': 22,
             },
-        'total_due': {
+        'total_tax': {
             'type': 'float',
             'required': True,
             'line': 23,
             },
+        'total_with_tax': {
+            'type': 'float',
+            'required': True,
+            'line': 24,
+            },
+        'total_due': {
+            'type': 'float',
+            'required': True,
+            'line': 25,
+            },
         'attachment_count': {
             'type': 'int',
             'required': False,
-            'line': 25,
+            'line': 26,
             },
         }
 
@@ -409,7 +582,7 @@ def get_and_check_data(doc, data_sheet):
     return data
 
 
-def generate_facturx_invoice_v1(button_arg=None):
+def generate_invoice_xml(factur_x=True, button_arg=None):
     doc = XSCRIPTCONTEXT.getDocument()
     macro_path = os.path.dirname(uno.fileUrlToSystemPath(__file__))
     localedir = os.path.join(macro_path, 'i18n')
@@ -448,7 +621,7 @@ def generate_facturx_invoice_v1(button_arg=None):
     doc.storeToURL(pdf_tmp_file_url, pdf_export_args)
 
     # generate XML
-    xml_byte = generate_facturx_xml(data)
+    xml_byte = if factur_x: generate_facturx_xml(data) else: generate_zugferd_xml(data)
     if not xml_byte:
         return
 
@@ -493,6 +666,15 @@ def generate_facturx_invoice_v1(button_arg=None):
         'com.sun.star.system.SystemShellExecute', oCtx)
     uno_openpdfviewer.execute(fx_pdf_filename_url, '', 0)
     return
+
+
+def generate_zugferd_invoice(button_arg=None):
+    return generate_invoice_xml(False, button_arg)
+
+
+def generate_facturx_invoice_v1(button_arg=None):
+    return generate_invoice_xml(True, button_arg)
+
 
 ##################################################
 # Include parts of my factur-x python lib here
@@ -906,7 +1088,7 @@ def generate_facturx_from_file(
 
 
 # Only show the main method to the users
-g_exportedScripts = generate_facturx_invoice_v1,
+g_exportedScripts = generate_facturx_invoice_v1, generate_zugferd_invoice
 
 # Declare this Python file as a Macro in libreoffice
 g_ImplementationHelper = unohelper.ImplementationHelper()

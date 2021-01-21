@@ -166,7 +166,7 @@ def generate_zugferd_xml(data):
         ET.QName(ns['ram'], 'SpecifiedTradeSettlementPaymentMeans'))
     payment_type = ET.SubElement(
         payment, ET.QName(ns['ram'], 'TypeCode'))
-    payment_type.text = data['31']
+    payment_type.text = '31'
     payment_info = ET.SubElement(
         payment, ET.QName(ns['ram'], 'Information'))
     payment_info.text = 'money order'
@@ -376,97 +376,112 @@ def get_and_check_data(doc, data_sheet):
         'customer_name': {
             'type': 'char',
             'required': True,
-            'line': 8,
+            'line': 11,
             },
         'customer_post_code': {
             'type': 'char',
             'required': True,
-            'line': 9,
+            'line': 12,
             },
         'customer_street_address': {
             'type': 'char',
             'required': True,
-            'line': 10,
+            'line': 13,
             },
         'customer_city_name': {
             'type': 'char',
             'required': True,
-            'line': 11,
+            'line': 14,
             },
         'customer_vat_number': {
             'type': 'char',
             'required': False,
-            'line': 12,
+            'line': 15,
             },
         'customer_siret': {
             'type': 'char',
             'required': False,
-            'line': 13,
+            'line': 16,
             },
         'customer_country_code': {
             'type': 'char',
             'required': True,
-            'line': 14,
+            'line': 17,
             },
         'customer_chorus_service_code': {
             'type': 'char',
             'required': False,
-            'line': 15,
+            'line': 18,
             },
         'invoice_or_refund': {
             'type': 'char',
             'required': False,
-            'line': 16,
+            'line': 20,
             },
         'customer_order_ref': {
             'type': 'char',
             'required': False,
-            'line': 17,
+            'line': 21,
             },
         'invoice_number': {
             'type': 'char',
             'required': True,
-            'line': 18,
+            'line': 22,
             },
         'invoice_payment_ref': {
             'type': 'char',
             'required': True,
-            'line': 19,
+            'line': 23,
             },
         'invoice_date': {
             'type': 'date',
             'required': True,
-            'line': 20,
+            'line': 24,
             },
         'invoice_currency': {
             'type': 'char',
             'required': True,
-            'line': 21,
+            'line': 25,
+            },
+        'payee_iban': {
+            'type': 'char',
+            'required': True,
+            'line': 26,
+            },
+        'payee_bic': {
+            'type': 'char',
+            'required': True,
+            'line': 27,
+            },
+        'payee_bank': {
+            'type': 'char',
+            'required': True,
+            'line': 28,
             },
         'total_without_tax': {
             'type': 'float',
             'required': True,
-            'line': 22,
+            'line': 30,
             },
         'total_tax': {
             'type': 'float',
             'required': True,
-            'line': 23,
+            'line': 31,
             },
         'total_with_tax': {
             'type': 'float',
             'required': True,
-            'line': 24,
+            'line': 32,
             },
         'total_due': {
             'type': 'float',
             'required': True,
-            'line': 25,
+            'line': 33,
             },
         'attachment_count': {
             'type': 'int',
             'required': False,
-            'line': 26,
+            'line': 35,
             },
         }
 
@@ -621,7 +636,7 @@ def generate_invoice_xml(factur_x=True, button_arg=None):
     doc.storeToURL(pdf_tmp_file_url, pdf_export_args)
 
     # generate XML
-    xml_byte = if factur_x: generate_facturx_xml(data) else: generate_zugferd_xml(data)
+    xml_byte = generate_facturx_xml(data) if factur_x else generate_zugferd_xml(data)
     if not xml_byte:
         return
 

@@ -48,7 +48,8 @@ INVOICE_REFUND_LANG = {
     # German
     'rechnung': '380',
     'stornorechnung': '381',
-    'storno': '381',
+    'rechnungskorrektur': '381',
+    'korrekturrechnung': '381',
     # Add other langs here
     }
 
@@ -518,7 +519,29 @@ def get_and_check_data(doc, data_sheet):
         if value or (fdict['type'] in ('float', 'int') and fdict['required']):
             data[field] = value
 
-    # Check data
+    # check data - global checks
+    if data['issuer_country_code'] == 'FR' and not data.get('issuer_siret'):
+        return msg_box(doc, _("In the second tab, cell B%s (%s) must have a value because the issuer's country is France.") % (fields['issuer_siret']['line'], fields['issuer_siret']['label']))
+    diff = data['total_with_tax'] - data['total_without_tax'] - data['total_tax']
+    if abs(diff) > 0.00001:
+        return msg_box(doc, _("In the second tab, the value of cell B%s (%s: %s) must be equal to the value of cell B%s (%s: %s) plus cell B%s (%s: %s).") % (
+            fields['total_with_tax']['line'], fields['total_with_tax']['label'], data['total_with_tax'],
+            fields['total_without_tax']['line'], fields['total_without_tax']['label'], data['total_without_tax'],
+            fields['total_tax']['line'], fields['total_tax']['label'], data['total_tax']))
+    if data['total_due'] - 0.00001 > data['total_with_tax']:
+        return msg_box(doc, _("In the second tab, the value of cell B%s (%s: %s) cannot be superior to the value of cell B%s (%s: %s).") % (
+            fields['total_due']['line'], fields['total_due']['label'], data['total_due'],
+            fields['total_with_tax']['line'], fields['total_with_tax']['label'], data['total_with_tax']))
+    permit_negative_values = False
+    if not data.get('invoice_or_refund'):
+        data['invoice_or_refund'] = '380'  # default value is invoice
+    elif data['invoice_or_refund'].lower() in INVOICE_REFUND_LANG:
+        data['invoice_or_refund'] = INVOICE_REFUND_LANG[data['invoice_or_refund'].lower()]
+        permit_negative_values = True
+    else:
+        return msg_box(doc, _("In the second tab, the value of cell B%s (%s) is '%s'; it must be either 'invoice' or 'refund'.") % (fields['invoice_or_refund']['line'], fields['invoice_or_refund']['label'], data['invoice_or_refund']))
+
+    # Check data - individual items
     for field, fdict in fields.items():
         if field in data:
             value_display = data[field]
@@ -531,12 +554,12 @@ def get_and_check_data(doc, data_sheet):
             if fdict['type'] == 'float':
                 if not isinstance(data[field], float):
                     return msg_box(doc, msg_start + _("it must be a float."))
-                if data[field] < 0:
+                if not permit_negative_values and data[field] < 0:
                     return msg_box(doc, msg_start + _("it must be positive."))
             elif fdict['type'] == 'int':
                 if not isinstance(data[field], int):
                     return msg_box(doc, msg_start + _("it must be an integer."))
-                if data[field] < 0:
+                if not permit_negative_values and data[field] < 0:
                     return msg_box(doc, msg_start + _("it must be positive."))
             elif fdict['type'] == 'date':
                 if not isinstance(data[field], datetime):
@@ -577,25 +600,6 @@ def get_and_check_data(doc, data_sheet):
                 if data['invoice_date'] > near_future or data['invoice_date'] < distant_past:
                     return msg_box(doc, msg_start + _("this date must be today or within the %d past years or within the %d next days.") % (max_past_years, max_future_days))
 
-    # Global checks
-    if data['issuer_country_code'] == 'FR' and not data.get('issuer_siret'):
-        return msg_box(doc, _("In the second tab, cell B%s (%s) must have a value because the issuer's country is France.") % (fields['issuer_siret']['line'], fields['issuer_siret']['label']))
-    diff = data['total_with_tax'] - data['total_without_tax'] - data['total_tax']
-    if abs(diff) > 0.00001:
-        return msg_box(doc, _("In the second tab, the value of cell B%s (%s: %s) must be equal to the value of cell B%s (%s: %s) plus cell B%s (%s: %s).") % (
-            fields['total_with_tax']['line'], fields['total_with_tax']['label'], data['total_with_tax'],
-            fields['total_without_tax']['line'], fields['total_without_tax']['label'], data['total_without_tax'],
-            fields['total_tax']['line'], fields['total_tax']['label'], data['total_tax']))
-    if data['total_due'] - 0.00001 > data['total_with_tax']:
-        return msg_box(doc, _("In the second tab, the value of cell B%s (%s: %s) cannot be superior to the value of cell B%s (%s: %s).") % (
-            fields['total_due']['line'], fields['total_due']['label'], data['total_due'],
-            fields['total_with_tax']['line'], fields['total_with_tax']['label'], data['total_with_tax']))
-    if not data.get('invoice_or_refund'):
-        data['invoice_or_refund'] = '380'  # default value is invoice
-    elif data['invoice_or_refund'].lower() in INVOICE_REFUND_LANG:
-        data['invoice_or_refund'] = INVOICE_REFUND_LANG[data['invoice_or_refund'].lower()]
-    else:
-        return msg_box(doc, _("In the second tab, the value of cell B%s (%s) is '%s'; it must be either 'invoice' or 'refund'.") % (fields['invoice_or_refund']['line'], fields['invoice_or_refund']['label'], data['invoice_or_refund']))
     return data
 
 

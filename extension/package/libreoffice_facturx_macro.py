@@ -41,12 +41,14 @@ INVOICE_REFUND_LANG = {
     # English
     'invoice': '380',
     'refund': '381',
+    'reversal': '381',
     # French
     'facture': '380',
     'avoir': '381',
     # German
     'rechnung': '380',
     'stornorechnung': '381',
+    'storno': '381',
     # Add other langs here
     }
 

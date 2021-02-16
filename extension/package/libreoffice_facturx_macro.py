@@ -528,18 +528,22 @@ def get_and_check_data(doc, data_sheet):
             fields['total_with_tax']['line'], fields['total_with_tax']['label'], data['total_with_tax'],
             fields['total_without_tax']['line'], fields['total_without_tax']['label'], data['total_without_tax'],
             fields['total_tax']['line'], fields['total_tax']['label'], data['total_tax']))
-    if data['total_due'] - 0.00001 > data['total_with_tax']:
-        return msg_box(doc, _("In the second tab, the value of cell B%s (%s: %s) cannot be superior to the value of cell B%s (%s: %s).") % (
-            fields['total_due']['line'], fields['total_due']['label'], data['total_due'],
-            fields['total_with_tax']['line'], fields['total_with_tax']['label'], data['total_with_tax']))
     permit_negative_values = False
     if not data.get('invoice_or_refund'):
         data['invoice_or_refund'] = '380'  # default value is invoice
     elif data['invoice_or_refund'].lower() in INVOICE_REFUND_LANG:
         data['invoice_or_refund'] = INVOICE_REFUND_LANG[data['invoice_or_refund'].lower()]
-        permit_negative_values = True
+        permit_negative_values = data['invoice_or_refund'] == '381'
     else:
         return msg_box(doc, _("In the second tab, the value of cell B%s (%s) is '%s'; it must be either 'invoice' or 'refund'.") % (fields['invoice_or_refund']['line'], fields['invoice_or_refund']['label'], data['invoice_or_refund']))
+    if not permit_negative_values and data['total_due'] - 0.00001 > data['total_with_tax']:
+        return msg_box(doc, _("In the second tab, the value of cell B%s (%s: %s) cannot be superior to the value of cell B%s (%s: %s).") % (
+            fields['total_due']['line'], fields['total_due']['label'], data['total_due'],
+            fields['total_with_tax']['line'], fields['total_with_tax']['label'], data['total_with_tax']))
+    if permit_negative_values and data['total_due'] < data['total_with_tax'] - 0.00001:
+        return msg_box(doc, _("In the second tab, the value of cell B%s (%s: %s) cannot be smaller to the value of cell B%s (%s: %s).") % (
+            fields['total_due']['line'], fields['total_due']['label'], data['total_due'],
+            fields['total_with_tax']['line'], fields['total_with_tax']['label'], data['total_with_tax']))
 
     # Check data - individual items
     for field, fdict in fields.items():
